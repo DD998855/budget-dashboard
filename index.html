@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>云笛的月度预算</title>
+  <style>
+    :root {
+      --bg: #F7F8FA;
+      --card: #FFFFFF;
+      --text: #111827;
+      --muted: #6B7280;
+      --faint: #9CA3AF;
+      --line: #E8EBF0;
+      --input-line: #E5E7EB;
+      --blue: #2563EB;
+      --blue-hover: #1D4ED8;
+      --blue-soft: #EFF6FF;
+      --orange: #F97316;
+      --orange-soft: #FFF7ED;
+      --red: #DC2626;
+      --red-soft: #FEF2F2;
+      --red-line: #FCA5A5;
+      --progress-bg: #EDF0F4;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      font-family: "Inter", "Source Han Sans SC", "Noto Sans CJK SC", sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    .app {
+      max-width: 1360px;
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 48px 48px 32px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 24px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    h1 {
+      font-size: 36px;
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      color: #A0A7B4;
+      font-size: 15px;
+      font-weight: 400;
+    }
+
+    .month-control {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: var(--faint);
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 250px minmax(590px, 1fr) 330px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .sidebar,
+    .overview,
+    .detail,
+    .ledger {
+      padding: 28px;
+    }
+
+    .sidebar,
+    .rightbar {
+      position: sticky;
+      top: 24px;
+    }
+
+    h2,
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .section-title {
+      margin-bottom: 16px;
+    }
+
+    .category-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .category-row {
+      position: relative;
+      width: 100%;
+      height: 50px;
+      border: 0;
+      border-radius: 12px;
+      padding: 0 14px 0 22px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      color: #374151;
+      background: transparent;
+      text-align: left;
+    }
+
+    .category-row::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 12px;
+      width: 3px;
+      height: 26px;
+      border-radius: 8px;
+      background: transparent;
+    }
+
+    .category-row:hover {
+      background: #F3F6FA;
+    }
+
+    .category-row.active {
+      background: var(--blue-soft);
+    }
+
+    .category-row.active::before {
+      background: var(--blue);
+    }
+
+    .category-name,
+    .category-money {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 15px;
+    }
+
+    .category-name {
+      color: #374151;
+      font-weight: 400;
+    }
+
+    .category-money {
+      color: var(--faint);
+      font-weight: 500;
+    }
+
+    .category-row.active .category-name {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .category-row.active .category-money {
+      color: var(--blue);
+    }
+
+    .category-row.over .category-money {
+      color: var(--red);
+    }
+
+    .category-row.over.active::before {
+      background: var(--red);
+    }
+
+    .main {
+      min-width: 0;
+      display: grid;
+      gap: 16px;
+    }
+
+    .overview,
+    .detail,
+    .ledger {
+      display: grid;
+      gap: 24px;
+    }
+
+    .overview {
+      padding: 32px;
+    }
+
+    .overview-head,
+    .detail-head,
+    .ledger-head,
+    .history-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .status-pill {
+      min-height: 32px;
+      border-radius: 999px;
+      padding: 7px 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--blue);
+      background: var(--blue-soft);
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .status-pill.attention {
+      color: var(--orange);
+      background: var(--orange-soft);
+    }
+
+    .status-pill.normal {
+      color: var(--muted);
+      background: #F3F6FA;
+    }
+
+    .status-pill.over {
+      color: var(--red);
+      background: var(--red-soft);
+      border: 1px solid var(--red-line);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.25fr;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+    }
+
+    .metric {
+      min-height: 112px;
+      padding: 18px;
+      border-right: 1px solid var(--line);
+      display: grid;
+      align-content: space-between;
+      gap: 16px;
+    }
+
+    .metric:nth-child(3n) {
+      border-right: 0;
+    }
+
+    .metric:nth-child(n + 4) {
+      border-top: 1px solid var(--line);
+    }
+
+    .metric span,
+    .meta,
+    label {
+      color: var(--faint);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .metric strong {
+      color: var(--text);
+      font-size: 32px;
+      line-height: 1.08;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .metric.negative strong,
+    .metric.alert strong,
+    .detail.over .detail-value:last-child,
+    .record.over .record-amount {
+      color: var(--red);
+    }
+
+    .metric.actionable {
+      border-radius: 0;
+    }
+
+    .metric.actionable:hover {
+      background: var(--blue-soft);
+    }
+
+    .copy-row {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      height: 52px;
+      border: 0;
+      border-radius: 12px;
+      padding: 0 16px;
+      color: #FFFFFF;
+      background: var(--blue);
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: var(--blue-hover);
+    }
+
+    .btn.secondary {
+      height: 40px;
+      color: var(--blue);
+      background: var(--card);
+      border: 1px solid #D6E4FF;
+    }
+
+    .btn.secondary:hover {
+      background: var(--blue-soft);
+    }
+
+    .detail-name {
+      margin-top: 12px;
+      color: var(--text);
+      font-size: 28px;
+      line-height: 1.15;
+      font-weight: 600;
+    }
+
+    .detail-status {
+      color: var(--blue);
+      min-height: 32px;
+      border-radius: 999px;
+      padding: 7px 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--blue-soft);
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .detail.near .detail-status {
+      color: var(--orange);
+      background: var(--orange-soft);
+    }
+
+    .detail.normal .detail-status {
+      color: var(--muted);
+      background: #F3F6FA;
+    }
+
+    .detail.over .detail-status {
+      color: var(--red);
+      background: var(--red-soft);
+      border: 1px solid var(--red-line);
+    }
+
+    .detail-line {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .detail-item {
+      display: grid;
+      gap: 14px;
+      padding: 16px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .detail-value {
+      color: var(--text);
+      font-size: 30px;
+      line-height: 1.1;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .progress {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--progress-bg);
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--blue);
+      transition: width 160ms ease;
+    }
+
+    .detail.over .progress-fill {
+      background: var(--red);
+    }
+
+    .rightbar {
+      min-width: 0;
+      display: grid;
+      gap: 16px;
+    }
+
+    .form {
+      display: grid;
+      gap: 16px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .input,
+    .month-control input {
+      width: 100%;
+      height: 48px;
+      border: 1px solid var(--input-line);
+      border-radius: 12px;
+      padding: 0 16px;
+      color: var(--text);
+      background: var(--card);
+      outline: none;
+      font-size: 15px;
+      font-weight: 400;
+    }
+
+    .month-control input {
+      width: 176px;
+      height: 44px;
+    }
+
+    .input::placeholder {
+      color: var(--faint);
+    }
+
+    .input:focus,
+    .month-control input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .records {
+      display: grid;
+      align-content: start;
+      max-height: 280px;
+      overflow: auto;
+    }
+
+    .record {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      min-height: 60px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .record:first-child {
+      padding-top: 0;
+    }
+
+    .record:last-child {
+      border-bottom: 0;
+    }
+
+    .record-date {
+      color: var(--faint);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .record-note {
+      margin-top: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 400;
+    }
+
+    .record-side {
+      display: grid;
+      gap: 8px;
+      justify-items: end;
+      white-space: nowrap;
+    }
+
+    .record-amount {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .delete {
+      border: 0;
+      padding: 0;
+      color: var(--faint);
+      background: transparent;
+      font-size: 14px;
+      font-weight: 400;
+    }
+
+    .delete:hover {
+      color: var(--red);
+    }
+
+    .empty {
+      padding: 8px 0 0;
+      color: var(--faint);
+      font-size: 14px;
+      text-align: left;
+    }
+
+    .soul {
+      justify-self: end;
+      color: #A0A7B4;
+      font-size: 15px;
+      font-weight: 400;
+    }
+
+    .toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      color: var(--text);
+      background: var(--card);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 160ms ease, transform 160ms ease;
+      pointer-events: none;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(17, 24, 39, 0.24);
+    }
+
+    .modal-backdrop.show {
+      display: grid;
+    }
+
+    .modal {
+      width: min(440px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 28px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 24px;
+    }
+
+    .modal-head,
+    .modal-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .modal-actions {
+      justify-content: flex-end;
+    }
+
+    .modal-close {
+      border: 0;
+      color: var(--faint);
+      background: transparent;
+      font-size: 20px;
+      line-height: 1;
+      font-weight: 400;
+    }
+
+    @media (max-width: 1240px) {
+      .workspace {
+        grid-template-columns: 250px minmax(0, 1fr);
+      }
+
+      .rightbar {
+        grid-column: 1 / -1;
+        position: static;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 820px) {
+      .app {
+        padding: 32px 20px;
+        gap: 16px;
+      }
+
+      .topbar,
+      .month-control,
+      .overview-head,
+      .detail-head,
+      .ledger-head,
+      .history-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .main,
+      .rightbar {
+        display: contents;
+      }
+
+      .overview {
+        order: 1;
+      }
+
+      .sidebar {
+        order: 2;
+        position: static;
+      }
+
+      .detail {
+        order: 3;
+      }
+
+      .expense-card {
+        order: 4;
+      }
+
+      .history-card {
+        order: 5;
+      }
+
+      .soul {
+        order: 6;
+      }
+
+      .sidebar,
+      .overview,
+      .detail,
+      .ledger {
+        padding: 24px;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .metric {
+        min-height: 104px;
+        border-right: 1px solid var(--line);
+        border-top: 1px solid var(--line);
+      }
+
+      .metric:nth-child(3n) {
+        border-right: 1px solid var(--line);
+      }
+
+      .metric:nth-child(2n) {
+        border-right: 0;
+      }
+
+      .metric:nth-child(-n + 2) {
+        border-top: 0;
+      }
+
+      .metric strong {
+        font-size: 30px;
+      }
+
+      #supportMonths {
+        font-size: 28px;
+      }
+
+      .detail-line {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+
+      .detail-value {
+        font-size: 28px;
+      }
+
+      .category-row {
+        height: 48px;
+      }
+
+      .month-control,
+      .month-control input,
+      .btn {
+        width: 100%;
+      }
+
+      .copy-row .btn {
+        width: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>云笛的月度预算</h1>
+        <p class="subtitle">慢慢来，把钱花在真正重要的地方。</p>
+      </div>
+
+      <div class="month-control">
+        <span id="monthLabel"></span>
+        <input id="monthPicker" type="month" aria-label="选择月份" />
+      </div>
+    </header>
+
+    <section class="workspace">
+      <aside class="sidebar card">
+        <p class="section-title">预算分类</p>
+        <div class="category-list" id="categoryList"></div>
+      </aside>
+
+      <main class="main">
+        <section class="overview card">
+          <div class="overview-head">
+            <h2>本月概览</h2>
+            <div class="status-pill" id="statusPill">预算充足</div>
+          </div>
+
+          <div class="metrics">
+            <div class="metric">
+              <span>预算</span>
+              <strong id="totalBudget">$0</strong>
+            </div>
+            <div class="metric">
+              <span>已花</span>
+              <strong id="totalSpent">$0</strong>
+            </div>
+            <div class="metric">
+              <span>剩余</span>
+              <strong id="totalRemaining">$0</strong>
+            </div>
+            <div class="metric" id="projectedMetric">
+              <span>预计月底</span>
+              <strong id="projectedSpent">$0</strong>
+            </div>
+            <div class="metric actionable" title="点击设置可用余额">
+              <span>可用余额</span>
+              <strong id="currentBalance">$0</strong>
+            </div>
+            <div class="metric">
+              <span>可支撑</span>
+              <strong id="supportMonths">约 0.0 个月</strong>
+            </div>
+          </div>
+
+          <div class="copy-row">
+            <button class="btn secondary" id="copySummary">复制给 Booboo</button>
+          </div>
+        </section>
+
+        <section class="detail card" id="categoryDetail">
+          <div class="detail-head">
+            <div>
+              <h2>当前预算</h2>
+              <div class="detail-name" id="detailName">外食</div>
+            </div>
+            <div class="detail-status" id="detailStatus">预算正常</div>
+          </div>
+
+          <div class="detail-line">
+            <div class="detail-item">
+              <span class="meta">预算</span>
+              <strong class="detail-value" id="detailBudget">$0</strong>
+            </div>
+            <div class="detail-item">
+              <span class="meta">已花</span>
+              <strong class="detail-value" id="detailSpent">$0</strong>
+            </div>
+            <div class="detail-item">
+              <span class="meta">剩余</span>
+              <strong class="detail-value" id="detailRemaining">$0</strong>
+            </div>
+          </div>
+
+          <div class="progress" aria-hidden="true">
+            <div class="progress-fill" id="detailProgress"></div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="rightbar">
+        <section class="ledger expense-card card">
+          <div class="ledger-head">
+            <div>
+              <h2>新增支出</h2>
+              <p class="meta" id="formMeta">当前分类：外食</p>
+            </div>
+          </div>
+
+          <form class="form" id="expenseForm">
+            <div class="field">
+              <label for="expenseDate">日期</label>
+              <input class="input" id="expenseDate" type="date" required />
+            </div>
+            <div class="field">
+              <label for="expenseAmount">金额 CAD</label>
+              <input class="input" id="expenseAmount" type="number" min="0.01" step="0.01" placeholder="输入金额" required />
+            </div>
+            <div class="field">
+              <label for="expenseNote">备注</label>
+              <input class="input" id="expenseNote" type="text" placeholder="例如：午饭 / 买菜 / 公交卡" required />
+            </div>
+            <button class="btn" type="submit">保存记录</button>
+          </form>
+        </section>
+
+        <section class="ledger history-card card">
+          <div class="history-head">
+            <div>
+              <h2>最近记录</h2>
+              <p class="meta" id="logTitle">外食</p>
+            </div>
+          </div>
+          <div class="records" id="entries"></div>
+        </section>
+      </aside>
+    </section>
+
+    <p class="soul">每个月都在靠近未来。</p>
+  </main>
+
+  <div class="toast" id="toast">已复制</div>
+
+  <div class="modal-backdrop" id="balanceModal" role="dialog" aria-modal="true" aria-labelledby="balanceModalTitle">
+    <form class="modal" id="balanceForm">
+      <div class="modal-head">
+        <div>
+          <h2 id="balanceModalTitle">设置可用余额</h2>
+          <p class="meta">输入银行卡、现金和常用账户的合计余额。</p>
+        </div>
+        <button class="modal-close" id="closeBalanceModal" type="button" aria-label="关闭">x</button>
+      </div>
+
+      <div class="field">
+        <label for="balanceInput">可用余额 CAD</label>
+        <input class="input" id="balanceInput" type="number" min="0" step="0.01" placeholder="5000" required />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn secondary" id="cancelBalanceModal" type="button">取消</button>
+        <button class="btn" type="submit">保存记录</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const categories = [
+      { id: "rent", name: "房租", budget: 850 },
+      { id: "eating", name: "外食", budget: 500 },
+      { id: "groceries", name: "买菜", budget: 250 },
+      { id: "transport", name: "交通", budget: 120 },
+      { id: "phone", name: "手机", budget: 50 },
+      { id: "study", name: "学习/软件", budget: 100 },
+      { id: "medical", name: "医疗/牙齿", budget: 150 },
+      { id: "social", name: "社交娱乐", budget: 200 },
+      { id: "shopping", name: "购物", budget: 150 },
+      { id: "misc", name: "杂项", budget: 130 }
+    ];
+
+    const storageKey = "canadaBudgetDashboard.v8";
+    const previousStorageKeys = [
+      "canadaBudgetDashboard.v7",
+      "canadaBudgetDashboard.v6",
+      "canadaBudgetDashboard.v5",
+      "canadaBudgetDashboard.v4",
+      "canadaBudgetDashboard.v3",
+      "canadaBudgetDashboard.v2",
+      "canadaBudgetDashboard.v1"
+    ];
+    const totalBudget = categories.reduce((sum, item) => sum + item.budget, 0);
+    const formatter = new Intl.NumberFormat("en-CA", {
+      style: "currency",
+      currency: "CAD",
+      maximumFractionDigits: 0
+    });
+
+    const state = loadState();
+    let activeCategoryId = state.activeCategoryId || "eating";
+
+    const categoryList = document.querySelector("#categoryList");
+    const entriesEl = document.querySelector("#entries");
+    const monthPicker = document.querySelector("#monthPicker");
+    const expenseDate = document.querySelector("#expenseDate");
+    const expenseAmount = document.querySelector("#expenseAmount");
+    const expenseNote = document.querySelector("#expenseNote");
+    const balanceModal = document.querySelector("#balanceModal");
+    const balanceInput = document.querySelector("#balanceInput");
+
+    init();
+
+    function init() {
+      monthPicker.value = state.month || getCurrentMonth();
+      state.month = monthPicker.value;
+      setDefaultExpenseDate();
+
+      monthPicker.addEventListener("change", () => {
+        state.month = monthPicker.value;
+        setDefaultExpenseDate();
+        saveState();
+        render();
+      });
+
+      document.querySelector("#expenseForm").addEventListener("submit", addExpense);
+      document.querySelector("#copySummary").addEventListener("click", copySummary);
+      document.querySelector("#currentBalance").closest(".metric").addEventListener("click", openBalanceModal);
+      document.querySelector("#balanceForm").addEventListener("submit", saveBalance);
+      document.querySelector("#closeBalanceModal").addEventListener("click", closeBalanceModal);
+      document.querySelector("#cancelBalanceModal").addEventListener("click", closeBalanceModal);
+      balanceModal.addEventListener("click", (event) => {
+        if (event.target === balanceModal) closeBalanceModal();
+      });
+      render();
+    }
+
+    function loadState() {
+      const fallback = {
+        month: getCurrentMonth(),
+        balance: 0,
+        activeCategoryId: "eating",
+        expenses: []
+      };
+
+      try {
+        const saved = localStorage.getItem(storageKey)
+          || previousStorageKeys.map((key) => localStorage.getItem(key)).find(Boolean);
+        const parsed = saved ? { ...fallback, ...JSON.parse(saved) } : fallback;
+        if (parsed.balance == null && parsed.income != null) {
+          parsed.balance = parsed.income;
+        }
+        delete parsed.income;
+        return parsed;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function saveState() {
+      state.activeCategoryId = activeCategoryId;
+      localStorage.setItem(storageKey, JSON.stringify(state));
+    }
+
+    function getCurrentMonth() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function setDefaultExpenseDate() {
+      const [year, month] = state.month.split("-").map(Number);
+      const today = new Date();
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const preferredDay = state.month === getCurrentMonth() ? today.getDate() : 1;
+      const safeDay = Math.min(preferredDay, daysInMonth);
+
+      expenseDate.min = `${state.month}-01`;
+      expenseDate.max = `${state.month}-${String(daysInMonth).padStart(2, "0")}`;
+      expenseDate.value = `${state.month}-${String(safeDay).padStart(2, "0")}`;
+    }
+
+    function getMonthExpenses() {
+      return state.expenses.filter((expense) => expense.date.startsWith(state.month));
+    }
+
+    function getSpent(categoryId) {
+      return getMonthExpenses()
+        .filter((expense) => expense.categoryId === categoryId)
+        .reduce((sum, expense) => sum + Number(expense.amount), 0);
+    }
+
+    function money(value) {
+      return formatter.format(Math.round(value));
+    }
+
+    function plainNumber(value) {
+      return String(Math.round(value));
+    }
+
+    function getProjection(totalSpent) {
+      const [year, month] = state.month.split("-").map(Number);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const isCurrentMonth = state.month === getCurrentMonth();
+      const dayOfMonth = isCurrentMonth ? new Date().getDate() : daysInMonth;
+      return dayOfMonth > 0 ? (totalSpent / dayOfMonth) * daysInMonth : totalSpent;
+    }
+
+    function getBudgetStatus(projected) {
+      const ratio = totalBudget > 0 ? projected / totalBudget : 0;
+      if (ratio <= 0.6) {
+        return { label: "预算充足", className: "" };
+      }
+      if (ratio <= 0.8) {
+        return { label: "预算正常", className: "normal" };
+      }
+      if (ratio <= 1) {
+        return { label: "剩余不多", className: "attention" };
+      }
+      return { label: "已超预算", className: "over" };
+    }
+
+    function render() {
+      const monthExpenses = getMonthExpenses();
+      const totalSpent = monthExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+      const remaining = totalBudget - totalSpent;
+      const projected = getProjection(totalSpent);
+      const status = getBudgetStatus(projected);
+      const selectedDate = new Date(`${state.month}-01T12:00:00`);
+      const supportMonths = totalBudget > 0 ? (state.balance / totalBudget).toFixed(1) : "0.0";
+
+      document.querySelector("#monthLabel").textContent = selectedDate.toLocaleDateString("zh-CN", {
+        year: "numeric",
+        month: "long"
+      });
+      document.querySelector("#totalBudget").textContent = money(totalBudget);
+      document.querySelector("#totalSpent").textContent = money(totalSpent);
+      document.querySelector("#totalRemaining").textContent = remaining >= 0 ? money(remaining) : `-${money(Math.abs(remaining))}`;
+      document.querySelector("#projectedSpent").textContent = money(projected);
+      document.querySelector("#currentBalance").textContent = money(state.balance);
+      document.querySelector("#supportMonths").textContent = window.matchMedia("(max-width: 420px)").matches
+        ? `${supportMonths}个月`
+        : `约 ${supportMonths} 个月`;
+
+      document.querySelector("#totalRemaining").closest(".metric").classList.toggle("negative", remaining < 0);
+      document.querySelector("#projectedMetric").classList.toggle("alert", projected > totalBudget);
+
+      const statusPill = document.querySelector("#statusPill");
+      statusPill.textContent = status.label;
+      statusPill.className = `status-pill ${status.className}`;
+
+      renderCategoryList();
+      renderActiveCategory();
+    }
+
+    function renderCategoryList() {
+      categoryList.innerHTML = categories.map((category) => {
+        const spent = getSpent(category.id);
+        const over = spent > category.budget;
+
+        return `
+          <button class="category-row ${over ? "over" : ""} ${category.id === activeCategoryId ? "active" : ""}" data-category="${category.id}">
+            <span class="category-name">${category.name}</span>
+            <span class="category-money">${plainNumber(spent)} / ${plainNumber(category.budget)}</span>
+          </button>
+        `;
+      }).join("");
+
+      document.querySelectorAll("[data-category]").forEach((row) => {
+        row.addEventListener("click", () => {
+          activeCategoryId = row.dataset.category;
+          saveState();
+          render();
+        });
+      });
+    }
+
+    function renderActiveCategory() {
+      const category = categories.find((item) => item.id === activeCategoryId) || categories[0];
+      const spent = getSpent(category.id);
+      const remaining = category.budget - spent;
+      const rawPercent = (spent / category.budget) * 100;
+      const percent = Math.min(rawPercent, 100);
+      const isOver = spent > category.budget;
+      const isLow = !isOver && rawPercent > 80;
+      const isNormal = !isOver && rawPercent > 60 && rawPercent <= 80;
+      const activeEntries = getMonthExpenses()
+        .filter((expense) => expense.categoryId === activeCategoryId)
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      document.querySelector("#formMeta").textContent = `当前分类：${category.name}`;
+      document.querySelector("#logTitle").textContent = category.name;
+      document.querySelector("#detailName").textContent = category.name;
+      document.querySelector("#detailBudget").textContent = money(category.budget);
+      document.querySelector("#detailSpent").textContent = money(spent);
+      document.querySelector("#detailRemaining").textContent = remaining >= 0 ? money(remaining) : `-${money(Math.abs(remaining))}`;
+      document.querySelector("#detailStatus").textContent = isOver
+        ? "已超预算"
+        : isLow
+          ? "剩余不多"
+          : isNormal
+            ? "预算正常"
+            : "预算充足";
+      document.querySelector("#detailProgress").style.width = `${percent}%`;
+      document.querySelector("#categoryDetail").className = `detail card ${isOver ? "over" : isLow ? "near" : isNormal ? "normal" : ""}`;
+
+      entriesEl.innerHTML = activeEntries.length
+        ? activeEntries.map((expense) => {
+          const expenseCategory = categories.find((item) => item.id === expense.categoryId) || category;
+          const isRecordOver = getSpent(expense.categoryId) > expenseCategory.budget;
+          return `
+            <div class="record ${isRecordOver ? "over" : ""}">
+              <div>
+                <div class="record-date">${formatRecordDate(expense.date)}</div>
+                <div class="record-note">${escapeHtml(expense.note)}</div>
+              </div>
+              <div class="record-side">
+                <div class="record-amount">${money(expense.amount)}</div>
+                <button class="delete" data-delete="${expense.id}" type="button">删除</button>
+              </div>
+            </div>
+          `;
+        }).join("")
+        : `<p class="empty">暂无记录</p>`;
+
+      document.querySelectorAll("[data-delete]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.expenses = state.expenses.filter((expense) => expense.id !== button.dataset.delete);
+          saveState();
+          render();
+        });
+      });
+    }
+
+    function addExpense(event) {
+      event.preventDefault();
+      state.expenses.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        categoryId: activeCategoryId,
+        date: expenseDate.value,
+        amount: Number(expenseAmount.value),
+        note: expenseNote.value.trim()
+      });
+
+      expenseAmount.value = "";
+      expenseNote.value = "";
+      saveState();
+      render();
+      showToast("记录已保存");
+    }
+
+    function openBalanceModal() {
+      balanceInput.value = state.balance;
+      balanceModal.classList.add("show");
+      balanceInput.focus();
+      balanceInput.select();
+    }
+
+    function closeBalanceModal() {
+      balanceModal.classList.remove("show");
+    }
+
+    function saveBalance(event) {
+      event.preventDefault();
+      const nextBalance = Number(balanceInput.value);
+      if (!Number.isFinite(nextBalance) || nextBalance < 0) return;
+      state.balance = nextBalance;
+      saveState();
+      render();
+      closeBalanceModal();
+      showToast("余额已更新");
+    }
+
+    async function copySummary() {
+      const monthExpenses = getMonthExpenses();
+      const totalSpent = monthExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+      const remaining = totalBudget - totalSpent;
+      const projected = getProjection(totalSpent);
+      const supportMonths = totalBudget > 0 ? (state.balance / totalBudget).toFixed(1) : "0.0";
+
+      const categorySummary = categories.map((category) => {
+        const spent = getSpent(category.id);
+        return `${category.name}: ${money(spent)} / ${money(category.budget)}`;
+      }).join("\n");
+
+      const overCategories = categories
+        .map((category) => ({ ...category, spent: getSpent(category.id) }))
+        .filter((category) => category.spent > category.budget)
+        .map((category) => `${category.name}: 多出 ${money(category.spent - category.budget)}`);
+
+      const rhythm = overCategories.length
+        ? "这个月有几个分类已超预算，但节奏已经被看见了。"
+        : "这个月节奏稳定，继续保持记录。";
+
+      const summary = [
+        "云笛的月度预算",
+        `月份: ${document.querySelector("#monthLabel").textContent}`,
+        `预算: ${money(totalBudget)}`,
+        `已花: ${money(totalSpent)}`,
+        `剩余: ${remaining >= 0 ? money(remaining) : `-${money(Math.abs(remaining))}`}`,
+        `预计月底: ${money(projected)}`,
+        `可用余额: ${money(state.balance)}`,
+        `可支撑: 约 ${supportMonths} 个月`,
+        "",
+        "各分类",
+        categorySummary,
+        "",
+        "需要关注",
+        overCategories.length ? overCategories.join("\n") : "暂无",
+        "",
+        rhythm
+      ].join("\n");
+
+      try {
+        await navigator.clipboard.writeText(summary);
+        showToast("已复制给 Booboo");
+      } catch {
+        prompt("请复制这段月报", summary);
+      }
+    }
+
+    function formatRecordDate(value) {
+      const date = new Date(`${value}T12:00:00`);
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+
+      if (sameDay(date, today)) return "今天";
+      if (sameDay(date, yesterday)) return "昨天";
+      return date.toLocaleDateString("zh-CN", { month: "long", day: "numeric" });
+    }
+
+    function sameDay(a, b) {
+      return a.getFullYear() === b.getFullYear()
+        && a.getMonth() === b.getMonth()
+        && a.getDate() === b.getDate();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function showToast(message) {
+      const toast = document.querySelector("#toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 1600);
+    }
+  </script>
+</body>
+</html>
