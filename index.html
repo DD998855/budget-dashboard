@@ -688,6 +688,16 @@
         flex-direction: column;
       }
 
+      .month-control {
+        width: 100%;
+        gap: 8px;
+      }
+
+      .month-control input {
+        width: 100%;
+        height: 48px;
+      }
+
       h1 {
         font-size: 34px;
       }
@@ -805,7 +815,7 @@
 
       <div class="month-control">
         <span id="monthLabel"></span>
-        <input id="monthPicker" type="month" aria-label="选择月份" />
+        <input id="monthPicker" type="date" aria-label="选择月份" />
       </div>
     </header>
 
@@ -995,12 +1005,12 @@
     init();
 
     function init() {
-      monthPicker.value = state.month || getCurrentMonth();
-      state.month = monthPicker.value;
+      monthPicker.value = getDateForMonth(state.month || getCurrentMonth());
+      state.month = getMonthFromDate(monthPicker.value);
       setDefaultExpenseDate();
 
       monthPicker.addEventListener("change", () => {
-        state.month = monthPicker.value;
+        state.month = getMonthFromDate(monthPicker.value);
         setDefaultExpenseDate();
         saveState();
         render();
@@ -1048,6 +1058,14 @@
     function getCurrentMonth() {
       const now = new Date();
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function getDateForMonth(month) {
+      return `${month}-01`;
+    }
+
+    function getMonthFromDate(value) {
+      return value ? value.slice(0, 7) : getCurrentMonth();
     }
 
     function setDefaultExpenseDate() {
