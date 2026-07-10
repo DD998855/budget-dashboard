@@ -31,6 +31,7 @@
 
     html,
     body {
+      width: 100%;
       min-height: 100%;
     }
 
@@ -460,8 +461,25 @@
       gap: 8px;
     }
 
+    .form-field {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    .form-field input,
+    .form-field button,
+    .form-field .date-display,
+    .form > .btn {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
     .input,
-    .month-control input {
+    .date-display {
       display: block;
       box-sizing: border-box;
       width: 100%;
@@ -478,7 +496,15 @@
       font-weight: 400;
     }
 
-    .month-control input {
+    .date-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .month-control .date-display {
       width: 176px;
       height: 44px;
     }
@@ -489,12 +515,19 @@
       inline-size: 100%;
     }
 
-    .month-control input {
-      text-align: center;
-    }
-
-    .month-control input::-webkit-date-and-time-value {
-      text-align: center;
+    .native-date-input,
+    .form-field .native-date-input {
+      position: absolute;
+      width: 1px;
+      inline-size: 1px;
+      height: 1px;
+      min-width: 0;
+      max-width: 1px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      opacity: 0;
+      pointer-events: none;
     }
 
     .input::placeholder {
@@ -502,7 +535,7 @@
     }
 
     .input:focus,
-    .month-control input:focus {
+    .date-display:focus {
       border-color: var(--blue);
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
     }
@@ -717,7 +750,7 @@
         width: 100%;
       }
 
-      .month-control input {
+      .month-control .date-display {
         align-self: stretch;
         width: 100%;
         max-width: 100%;
@@ -815,7 +848,8 @@
       }
 
       .month-control,
-      .month-control input,
+      .month-control .date-display,
+      .date-display,
       .input,
       input,
       select,
@@ -828,6 +862,14 @@
 
       .copy-row .btn {
         width: auto;
+      }
+
+      .native-date-input,
+      .form-field .native-date-input {
+        width: 1px;
+        inline-size: 1px;
+        max-width: 1px;
+        min-width: 0;
       }
     }
   </style>
@@ -842,7 +884,8 @@
 
       <div class="month-control">
         <span id="monthLabel"></span>
-        <input id="monthPicker" type="date" aria-label="选择月份" />
+        <button class="date-display month-date-display" id="monthDisplay" type="button"></button>
+        <input class="native-date-input" id="monthPicker" type="date" aria-label="选择月份" tabindex="-1" />
       </div>
     </header>
 
@@ -931,15 +974,16 @@
           </div>
 
           <form class="form" id="expenseForm">
-            <div class="field">
+            <div class="field form-field">
               <label for="expenseDate">日期</label>
-              <input class="input" id="expenseDate" type="date" required />
+              <button class="date-display expense-date-display" id="expenseDateDisplay" type="button"></button>
+              <input class="native-date-input" id="expenseDate" type="date" required tabindex="-1" />
             </div>
-            <div class="field">
+            <div class="field form-field">
               <label for="expenseAmount">金额 CAD</label>
               <input class="input" id="expenseAmount" type="number" min="0.01" step="0.01" placeholder="输入金额" required />
             </div>
-            <div class="field">
+            <div class="field form-field">
               <label for="expenseNote">备注</label>
               <input class="input" id="expenseNote" type="text" placeholder="例如：午饭 / 买菜 / 公交卡" required />
             </div>
@@ -1023,7 +1067,9 @@
     const categoryList = document.querySelector("#categoryList");
     const entriesEl = document.querySelector("#entries");
     const monthPicker = document.querySelector("#monthPicker");
+    const monthDisplay = document.querySelector("#monthDisplay");
     const expenseDate = document.querySelector("#expenseDate");
+    const expenseDateDisplay = document.querySelector("#expenseDateDisplay");
     const expenseAmount = document.querySelector("#expenseAmount");
     const expenseNote = document.querySelector("#expenseNote");
     const balanceModal = document.querySelector("#balanceModal");
@@ -1035,7 +1081,9 @@
       monthPicker.value = getDateForMonth(state.month || getCurrentMonth());
       state.month = getMonthFromDate(monthPicker.value);
       setDefaultExpenseDate();
+      syncDateDisplays();
 
+      monthDisplay.addEventListener("click", () => openDatePicker(monthPicker));
       monthPicker.addEventListener("change", () => {
         state.month = getMonthFromDate(monthPicker.value);
         setDefaultExpenseDate();
@@ -1043,6 +1091,8 @@
         render();
       });
 
+      expenseDateDisplay.addEventListener("click", () => openDatePicker(expenseDate));
+      expenseDate.addEventListener("change", syncExpenseDateDisplay);
       document.querySelector("#expenseForm").addEventListener("submit", addExpense);
       document.querySelector("#copySummary").addEventListener("click", copySummary);
       document.querySelector("#currentBalance").closest(".metric").addEventListener("click", openBalanceModal);
@@ -1095,6 +1145,33 @@
       return value ? value.slice(0, 7) : getCurrentMonth();
     }
 
+    function formatChineseDate(value) {
+      const [year, month, day] = value.split("-").map(Number);
+      return `${year}年${month}月${day}日`;
+    }
+
+    function openDatePicker(input) {
+      input.focus();
+      if (typeof input.showPicker === "function") {
+        input.showPicker();
+      } else {
+        input.click();
+      }
+    }
+
+    function syncMonthDisplay() {
+      monthDisplay.textContent = formatChineseDate(monthPicker.value);
+    }
+
+    function syncExpenseDateDisplay() {
+      expenseDateDisplay.textContent = formatChineseDate(expenseDate.value);
+    }
+
+    function syncDateDisplays() {
+      syncMonthDisplay();
+      syncExpenseDateDisplay();
+    }
+
     function setDefaultExpenseDate() {
       const [year, month] = state.month.split("-").map(Number);
       const today = new Date();
@@ -1105,6 +1182,7 @@
       expenseDate.min = `${state.month}-01`;
       expenseDate.max = `${state.month}-${String(daysInMonth).padStart(2, "0")}`;
       expenseDate.value = `${state.month}-${String(safeDay).padStart(2, "0")}`;
+      syncExpenseDateDisplay();
     }
 
     function getMonthExpenses() {
@@ -1160,6 +1238,7 @@
         year: "numeric",
         month: "long"
       });
+      syncMonthDisplay();
       document.querySelector("#totalBudget").textContent = money(totalBudget);
       document.querySelector("#totalSpent").textContent = money(totalSpent);
       document.querySelector("#totalRemaining").textContent = remaining >= 0 ? money(remaining) : `-${money(Math.abs(remaining))}`;
